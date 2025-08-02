@@ -180,9 +180,8 @@
     const firebaseConfig = {
       apiKey: "AIzaSyDyGbrlrxWmcNj9Tm2ZWWa7gvvoil4lyrI",
       authDomain: "joabe-anotacoes.firebaseapp.com",
-      databaseURL: "https://joabe-anotacoes-default-rtdb.firebaseio.com",
       projectId: "joabe-anotacoes",
-      storageBucket: "joabe-anotacoes.firebasestorage.app",
+      storageBucket: "joabe-anotacoes.appspot.com",
       messagingSenderId: "50670952443",
       appId: "1:50670952443:web:67880481e8aadec981355e",
       measurementId: "G-E68TLB4Z1G"
@@ -198,8 +197,12 @@
       const compra = parseFloat(document.getElementById('compra').value);
       const vendaInput = document.getElementById('venda').value;
       const venda = vendaInput ? parseFloat(vendaInput) : null;
-      const dataCompra = document.getElementById('dataCompra').value || null;
-      const dataVenda = document.getElementById('dataVenda').value || null;
+
+      const dataCompraStr = document.getElementById('dataCompra').value;
+      const dataVendaStr = document.getElementById('dataVenda').value;
+      const dataCompra = dataCompraStr ? new Date(dataCompraStr) : null;
+      const dataVenda = dataVendaStr ? new Date(dataVendaStr) : null;
+
       const categoria = document.getElementById('categoria').value;
 
       if (!nome || !compra || !categoria) {
@@ -231,14 +234,17 @@
         const lucro = vendido ? (item.venda - item.compra).toFixed(2) : "-";
         if (vendido) lucroTotal += (item.venda - item.compra);
 
+        const dataCompra = item.dataCompra ? new Date(item.dataCompra.seconds ? item.dataCompra.seconds * 1000 : item.dataCompra).toLocaleDateString() : "";
+        const dataVenda = item.dataVenda ? new Date(item.dataVenda.seconds ? item.dataVenda.seconds * 1000 : item.dataVenda).toLocaleDateString() : "";
+
         tabela.innerHTML += `
           <tr id="linha-${id}">
             <td contenteditable="false">${item.nome}</td>
             <td contenteditable="false">${item.compra}</td>
             <td contenteditable="false">${item.venda ?? ""}</td>
             <td>${vendido ? "R$ " + lucro : "-"}</td>
-            <td contenteditable="false">${item.dataCompra ?? ""}</td>
-            <td contenteditable="false">${item.dataVenda ?? ""}</td>
+            <td contenteditable="false">${dataCompra}</td>
+            <td contenteditable="false">${dataVenda}</td>
             <td contenteditable="false">${item.categoria}</td>
             <td>
               <button class="btn-edit" onclick="editar('${id}')">✏️</button>
@@ -273,8 +279,12 @@
       const nome = cels[0].innerText.trim();
       const compra = parseFloat(cels[1].innerText);
       const venda = cels[2].innerText.trim() ? parseFloat(cels[2].innerText) : null;
-      const dataCompra = cels[4].innerText.trim() || null;
-      const dataVenda = cels[5].innerText.trim() || null;
+
+      const dataCompraStr = cels[4].innerText.trim();
+      const dataVendaStr = cels[5].innerText.trim();
+      const dataCompra = dataCompraStr ? new Date(dataCompraStr) : null;
+      const dataVenda = dataVendaStr ? new Date(dataVendaStr) : null;
+
       const categoria = cels[6].innerText.trim();
 
       if (!nome || !compra || !categoria) {
