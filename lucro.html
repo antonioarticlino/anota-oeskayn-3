@@ -62,6 +62,18 @@
       box-shadow: 4px 4px #1f1f1f;
     }
 
+    #btnExportar {
+      margin: 20px auto;
+      display: block;
+      font-family: 'Press Start 2P', cursive;
+      background: #00aaaa;
+      border: 3px solid #000;
+      padding: 10px 20px;
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 2px 2px #000;
+    }
+
     .voltar {
       display: block;
       margin-top: 30px;
@@ -86,9 +98,11 @@
       <option value="todos">Selecionar mês...</option>
     </select>
     <div class="result" id="resultado-lucro">Selecione um mês para ver o lucro.</div>
+    <button id="btnExportar" style="display: none;">📄 Exportar PDF</button>
     <a href="index.html" class="voltar">⬅️ Voltar ao painel principal</a>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -109,6 +123,7 @@
 
     const filtro = document.getElementById("filtro-lucro");
     const resultado = document.getElementById("resultado-lucro");
+    const btnExportar = document.getElementById("btnExportar");
 
     function getMesAno(data) {
       if (!data) return null;
@@ -117,7 +132,7 @@
       if (typeof data === "string" || data instanceof String) {
         d = new Date(data);
       } else if (data.seconds) {
-        d = new Date(data.seconds * 1000); // Firebase Timestamp
+        d = new Date(data.seconds * 1000);
       } else {
         d = new Date(data);
       }
@@ -137,25 +152,56 @@
       return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     }
 
+    function exportarParaPDF(mesSelecionado, comprasMes, comprasVendas, vendas, lucro) {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      doc.setFont("courier", "bold");
+      doc.setFontSize(16);
+      doc.text("Relatório de Lucro Mensal", 20, 20);
+
+      doc.setFontSize(12);
+      doc.text(`Mês: ${formatarMes(mesSelecionado)}`, 20, 35);
+      doc.text(`📥 Gastos (compras feitas): R$ ${comprasMes.toFixed(2)}`, 20, 50);
+      doc.text(`📦 Compras (itens vendidos): R$ ${comprasVendas.toFixed(2)}`, 20, 60);
+      doc.text(`💰 Vendas: R$ ${vendas.toFixed(2)}`, 20, 70);
+      doc.text(`🧾 Lucro: R$ ${lucro.toFixed(2)}`, 20, 80);
+
+      doc.save(`lucro_${mesSelecionado}.pdf`);
+    }
+
     function calcularLucro(itens, mesSelecionado) {
-      let totalCompra = 0;
+      let totalCompraVendas = 0;
       let totalVenda = 0;
+      let totalCompraDoMes = 0;
 
       itens.forEach(item => {
-        const mesData = item.dataVenda ? getMesAno(item.dataVenda) : null;
+        const mesVenda = item.dataVenda ? getMesAno(item.dataVenda) : null;
+        const mesCompra = item.dataCompra ? getMesAno(item.dataCompra) : null;
 
-        if (mesData === mesSelecionado) {
-          totalCompra += Number(item.compra || 0);
+        if (mesVenda === mesSelecionado) {
+          totalCompraVendas += Number(item.compra || 0);
           totalVenda += Number(item.venda || 0);
+        }
+
+        if (mesCompra === mesSelecionado) {
+          totalCompraDoMes += Number(item.compra || 0);
         }
       });
 
-      const lucro = totalVenda - totalCompra;
+      const lucro = totalVenda - totalCompraVendas;
+
       resultado.innerHTML = `
-        📦 Compras: R$ ${totalCompra.toFixed(2)}<br>
+        📥 Gastos (compras feitas): R$ ${totalCompraDoMes.toFixed(2)}<br>
+        📦 Compras (itens vendidos): R$ ${totalCompraVendas.toFixed(2)}<br>
         💰 Vendas: R$ ${totalVenda.toFixed(2)}<br>
         🧾 <strong>Lucro: R$ ${lucro.toFixed(2)}</strong>
       `;
+
+      btnExportar.style.display = "block";
+      btnExportar.onclick = () => {
+        exportarParaPDF(mesSelecionado, totalCompraDoMes, totalCompraVendas, totalVenda, lucro);
+      };
     }
 
     async function atualizarFiltro() {
@@ -180,6 +226,7 @@
           calcularLucro(itens, filtro.value);
         } else {
           resultado.textContent = "Selecione um mês para ver o lucro.";
+          btnExportar.style.display = "none";
         }
       });
     }
