@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Lucro Mensal - Minecraft</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      font-family: 'Press Start 2P', cursive;
+     background-color: #000;
+      background-size: 64px;
+      color: #fff;
+    }
+
+    .container {
+      width: 100%;
+      height: 100%;
+      padding: 30px;
+      box-sizing: border-box;
+      background-color: rgba(0, 0, 0, 0.85);
+      border: 4px solid #3e3e3e;
+    }
+
+    h1 {
+      text-align: center;
+      color: #8fff5f;
+      text-shadow: 2px 2px #000;
+      margin-bottom: 30px;
+    }
+
+    select {
+      width: 100%;
+      padding: 12px;
+      font-size: 14px;
+      font-family: 'Press Start 2P', monospace;
+      border-radius: 0;
+      background-color: #c2b280;
+      color: #000;
+      border: 3px solid #000;
+      margin-bottom: 30px;
+      box-shadow: 2px 2px #1f1f1f;
+    }
+
+    option {
+      background-color: #c2b280;
+      color: #000;
+    }
+
+    .result {
+      text-align: center;
+      font-size: 14px;
+      font-weight: bold;
+      color: #8fff5f;
+      background: #444;
+      padding: 20px;
+      border: 3px solid #000;
+      border-radius: 0;
+      box-shadow: 4px 4px #1f1f1f;
+    }
+
+    .voltar {
+      display: block;
+      margin-top: 30px;
+      text-align: center;
+      font-size: 12px;
+      color: #00ffff;
+      text-decoration: none;
+      font-family: 'Press Start 2P', cursive;
+      transition: 0.3s;
+    }
+
+    .voltar:hover {
+      transform: scale(1.05);
+      text-shadow: 0 0 5px #00ffff;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📊 Lucro Mensal</h1>
+    <select id="filtro-lucro">
+      <option value="todos">Selecionar mês...</option>
+    </select>
+    <div class="result" id="resultado-lucro">Selecione um mês para ver o lucro.</div>
+    <a href="index.html" class="voltar">⬅️ Voltar ao painel principal</a>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDyGbrlrxWmcNj9Tm2ZWWa7gvvoil4lyrI",
+      authDomain: "joabe-anotacoes.firebaseapp.com",
+      projectId: "joabe-anotacoes",
+      storageBucket: "joabe-anotacoes.appspot.com",
+      messagingSenderId: "50670952443",
+      appId: "1:50670952443:web:67880481e8aadec981355e",
+      measurementId: "G-E68TLB4Z1G"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const col = collection(db, "itens");
+
+    const filtro = document.getElementById("filtro-lucro");
+    const resultado = document.getElementById("resultado-lucro");
+
+    function getMesAno(dataStr) {
+      const d = new Date(dataStr);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    }
+
+    function formatarMes(m) {
+      const [ano, mes] = m.split("-");
+      return `${mes}/${ano}`;
+    }
+
+    async function carregarItens() {
+      const snap = await getDocs(col);
+      return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    }
+
+    function calcularLucro(itens, mesSelecionado) {
+      let totalCompra = 0;
+      let totalVenda = 0;
+
+      itens.forEach(item => {
+        const mesData = item.dataVenda ? getMesAno(item.dataVenda) : null;
+
+        if (mesData === mesSelecionado) {
+          totalCompra += Number(item.compra || 0);
+          totalVenda += Number(item.venda || 0);
+        }
+      });
+
+      const lucro = totalVenda - totalCompra;
+      resultado.innerHTML = `
+        📦 Compras: R$ ${totalCompra.toFixed(2)}<br>
+        💰 Vendas: R$ ${totalVenda.toFixed(2)}<br>
+        🧾 <strong>Lucro: R$ ${lucro.toFixed(2)}</strong>
+      `;
+    }
+
+    async function atualizarFiltro() {
+      const itens = await carregarItens();
+      const meses = new Set();
+
+      itens.forEach(item => {
+        if (item.dataVenda) meses.add(getMesAno(item.dataVenda));
+      });
+
+      filtro.innerHTML = '<option value="todos">Selecionar mês...</option>';
+      [...meses].sort().forEach(m => {
+        const opt = document.createElement("option");
+        opt.value = m;
+        opt.textContent = formatarMes(m);
+        filtro.appendChild(opt);
+      });
+
+      filtro.addEventListener("change", () => {
+        if (filtro.value !== "todos") {
+          calcularLucro(itens, filtro.value);
+        } else {
+          resultado.textContent = "Selecione um mês para ver o lucro.";
+        }
+      });
+    }
+
+    atualizarFiltro();
+  </script>
+</body>
+</html>
