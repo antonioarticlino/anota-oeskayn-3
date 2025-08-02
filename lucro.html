@@ -127,7 +127,6 @@
 
     function getMesAno(data) {
       if (!data) return null;
-
       let d;
       if (typeof data === "string" || data instanceof String) {
         d = new Date(data);
@@ -136,9 +135,7 @@
       } else {
         d = new Date(data);
       }
-
       if (isNaN(d.getTime())) return null;
-
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     }
 
@@ -152,7 +149,7 @@
       return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     }
 
-    function exportarParaPDF(mesSelecionado, comprasMes, comprasVendas, vendas, lucro) {
+    function exportarParaPDF(mesSelecionado, comprasDoMes, comprasVendidas, vendas, lucro) {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
 
@@ -162,8 +159,8 @@
 
       doc.setFontSize(12);
       doc.text(`Mês: ${formatarMes(mesSelecionado)}`, 20, 35);
-      doc.text(`📥 Gastos (compras feitas): R$ ${comprasMes.toFixed(2)}`, 20, 50);
-      doc.text(`📦 Compras (itens vendidos): R$ ${comprasVendas.toFixed(2)}`, 20, 60);
+      doc.text(`📥 Gastos (compras no mês): R$ ${comprasDoMes.toFixed(2)}`, 20, 50);
+      doc.text(`📦 Compras dos vendidos: R$ ${comprasVendidas.toFixed(2)}`, 20, 60);
       doc.text(`💰 Vendas: R$ ${vendas.toFixed(2)}`, 20, 70);
       doc.text(`🧾 Lucro: R$ ${lucro.toFixed(2)}`, 20, 80);
 
@@ -171,36 +168,36 @@
     }
 
     function calcularLucro(itens, mesSelecionado) {
-      let totalCompraVendas = 0;
-      let totalVenda = 0;
-      let totalCompraDoMes = 0;
+      let comprasDoMes = 0;
+      let comprasVendidas = 0;
+      let vendas = 0;
 
       itens.forEach(item => {
-        const mesVenda = item.dataVenda ? getMesAno(item.dataVenda) : null;
         const mesCompra = item.dataCompra ? getMesAno(item.dataCompra) : null;
-
-        if (mesVenda === mesSelecionado) {
-          totalCompraVendas += Number(item.compra || 0);
-          totalVenda += Number(item.venda || 0);
-        }
+        const mesVenda = item.dataVenda ? getMesAno(item.dataVenda) : null;
 
         if (mesCompra === mesSelecionado) {
-          totalCompraDoMes += Number(item.compra || 0);
+          comprasDoMes += Number(item.compra || 0);
+        }
+
+        if (mesVenda === mesSelecionado) {
+          comprasVendidas += Number(item.compra || 0);
+          vendas += Number(item.venda || 0);
         }
       });
 
-      const lucro = totalVenda - totalCompraVendas;
+      const lucro = vendas - comprasVendidas;
 
       resultado.innerHTML = `
-        📥 Gastos (compras feitas): R$ ${totalCompraDoMes.toFixed(2)}<br>
-        📦 Compras (itens vendidos): R$ ${totalCompraVendas.toFixed(2)}<br>
-        💰 Vendas: R$ ${totalVenda.toFixed(2)}<br>
+        📥 Gastos (compras no mês): R$ ${comprasDoMes.toFixed(2)}<br>
+        📦 Compras dos itens vendidos: R$ ${comprasVendidas.toFixed(2)}<br>
+        💰 Vendas: R$ ${vendas.toFixed(2)}<br>
         🧾 <strong>Lucro: R$ ${lucro.toFixed(2)}</strong>
       `;
 
       btnExportar.style.display = "block";
       btnExportar.onclick = () => {
-        exportarParaPDF(mesSelecionado, totalCompraDoMes, totalCompraVendas, totalVenda, lucro);
+        exportarParaPDF(mesSelecionado, comprasDoMes, comprasVendidas, vendas, lucro);
       };
     }
 
@@ -209,8 +206,10 @@
       const meses = new Set();
 
       itens.forEach(item => {
-        const mes = getMesAno(item.dataVenda);
-        if (mes) meses.add(mes);
+        const mesCompra = getMesAno(item.dataCompra);
+        const mesVenda = getMesAno(item.dataVenda);
+        if (mesCompra) meses.add(mesCompra);
+        if (mesVenda) meses.add(mesVenda);
       });
 
       filtro.innerHTML = '<option value="todos">Selecionar mês...</option>';
@@ -235,4 +234,3 @@
   </script>
 </body>
 </html>
-
